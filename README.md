@@ -1,5 +1,7 @@
 # TPN Calculator
 
+[![DOI](https://zenodo.org/badge/1121737054.svg)](https://doi.org/10.5281/zenodo.18048351)
+
 A web-based tool for total protein normalization and virtual lane visualization of Simple Western (capillary-based Western blot) data.
 
 - Documentation: https://katsudagroup.github.io/tpn-calculator-docs
