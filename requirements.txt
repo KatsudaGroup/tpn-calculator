@@ -1,0 +1,6 @@
+Pillow
+dash
+dash-bootstrap-components
+pandas
+openpyxl
+gunicorn
