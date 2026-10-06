@@ -1,12 +1,23 @@
 import pandas as pd
 import re
 
-def calc_signal_sum(df: pd.DataFrame, mw_column_name: str = 'kDa'):
+def calc_signal_sum(df: pd.DataFrame, mw_column_name: str = 'kDa', signal_range_min = None, signal_range_max = None):
+    filtered_df = df
+    # Extract specified MW region
+    if signal_range_min is not None:
+        filtered_df = filtered_df.loc[
+            filtered_df[mw_column_name] >= signal_range_min
+        ]
+    if signal_range_max is not None:
+        filtered_df = filtered_df.loc[
+            filtered_df[mw_column_name] <= signal_range_max
+        ]
+
     ret = {}
-    for column in df.columns:
+    for column in filtered_df.columns:
         if column == mw_column_name:
             continue
-        signal_sum = df[column].sum()
+        signal_sum = filtered_df[column].sum()
         ret[column] = signal_sum
     return ret
 
@@ -20,9 +31,20 @@ def calc_signal_sum2(df: pd.DataFrame, mw_column_name: str = 'kDa'):
         ret[column] = signal_sum
     return ret
 
-def calc_signal_sum_positive_region(df: pd.DataFrame, mw_column_name: str = 'kDa'):
+def calc_signal_sum_positive_region(df: pd.DataFrame, mw_column_name: str = 'kDa', signal_range_min = None, signal_range_max = None):
+    filtered_df = df
+    # Extract specified MW region
+    if signal_range_min is not None:
+        filtered_df = filtered_df.loc[
+            filtered_df[mw_column_name] >= signal_range_min
+        ]
+    if signal_range_max is not None:
+        filtered_df = filtered_df.loc[
+            filtered_df[mw_column_name] <= signal_range_max
+        ]
+
     ret = {}
-    sorted_df = df.sort_values(by = mw_column_name, ascending = False).reset_index(drop = True)
+    sorted_df = filtered_df.sort_values(by = mw_column_name, ascending = False).reset_index(drop = True)
     for column in sorted_df.columns:
         if column == mw_column_name:
             continue
@@ -31,8 +53,7 @@ def calc_signal_sum_positive_region(df: pd.DataFrame, mw_column_name: str = 'kDa
             stop_index = negative_indices[0]
         else:
             stop_index = len(sorted_df[column])
-        #print("{}: {} {}".format(column, stop_index, sorted_df[mw_column_name][0:stop_index]))
-        signal_sum = sorted_df[column][0:stop_index].sum()
+        signal_sum = sorted_df[column].iloc[:stop_index].sum()
         ret[column] = signal_sum
     return ret
 

@@ -132,20 +132,27 @@ def callback_normalization(_app: dash.Dash, default_values):
         #----------------------------------------
         # If signal calculation range is set, extract the dataframe between the region
         #----------------------------------------
+        dataframe = pd.DataFrame.from_records(raw_data, columns = column_names)
         if signal_calculation_range_switch == True:
-            extracted_data = filter(lambda x: signal_range_min <= x[mw_column_name] <= signal_range_max, raw_data)
-            dataframe = pd.DataFrame.from_records(extracted_data, columns = column_names)
+            dataframe = dataframe.loc[
+                (dataframe[mw_column_name] >= signal_range_min)
+                & (dataframe[mw_column_name] <= signal_range_max)]
         else:
-            dataframe = pd.DataFrame.from_records(raw_data, columns = column_names)
+            signal_range_min = None
+            signal_range_max = None
 
         #----------------------------------------
         # First, calculate the signal sums
         #----------------------------------------
         signal_sums = {}
         if stop_summation_negative == True:
-            signal_sums = utilfuncs.calc_signal_sum_positive_region(dataframe)
+            signal_sums = utilfuncs.calc_signal_sum_positive_region(
+                dataframe, mw_column_name=mw_column_name, 
+                signal_range_min=signal_range_min, signal_range_max = signal_range_max)
         else:
-            signal_sums = utilfuncs.calc_signal_sum(dataframe)
+            signal_sums = utilfuncs.calc_signal_sum(
+                dataframe, mw_column_name=mw_column_name, 
+                signal_range_min=signal_range_min, signal_range_max=signal_range_max)
 
         #----------------------------------------
         # Second, calculate the normalize factors
