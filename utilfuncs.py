@@ -58,6 +58,16 @@ def calc_signal_sum_positive_region(df: pd.DataFrame, mw_column_name: str = 'kDa
     return ret
 
 
+def calc_normalization_factors(signal_sums, total_protein_columns, reference_column):
+    """Calculate Eq. 3 coefficients; preserve zero-sum series as factor zero."""
+    ref_signal = signal_sums[reference_column]
+    return {
+        column: ref_signal / signal_sums[column]
+        if float(signal_sums[column]) != 0.0 else 0
+        for column in total_protein_columns
+    }
+
+
 def expand_range(input_str):
     result = []
     if input_str == None or isinstance(input_str, str) != True:

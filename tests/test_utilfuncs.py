@@ -1,7 +1,11 @@
 import pandas as pd
 import pytest
 
-from utilfuncs import calc_signal_sum, calc_signal_sum_positive_region
+from utilfuncs import (
+    calc_normalization_factors,
+    calc_signal_sum,
+    calc_signal_sum_positive_region,
+)
 
 
 @pytest.mark.parametrize(
@@ -48,3 +52,38 @@ def test_positive_region_filters_range_then_stops_before_first_negative():
     # A stops at 30 kDa; B has no negative in range; C stops immediately.
     # Negative values at 50 kDa are outside the range and must not stop summation.
     assert result == {"A": 5, "B": 9, "C": 0}
+
+
+@pytest.mark.parametrize(
+    "reference, expected",
+    [
+        pytest.param("A", {"A": 1, "B": 2, "C": 1 / 3}, id="reference-A"),
+        pytest.param("B", {"A": 0.5, "B": 1, "C": 1 / 6}, id="reference-B"),
+    ],
+)
+def test_eq3_divides_selected_reference_total_by_each_total(reference, expected):
+    """Eq. 3 uses the selected reference and gives C_ref = 1 for nonzero totals."""
+    signal_sums = {"A": 100, "B": 50, "C": 300, "Target": 999}
+
+    result = calc_normalization_factors(signal_sums, ["A", "B", "C"], reference)
+
+    assert result == pytest.approx(expected)
+    assert result[reference] == pytest.approx(1)
+
+
+def test_normalization_factors_assign_zero_to_zero_sum_series():
+    """Zero denominators use the existing factor-zero convention outside Eq. 3."""
+    result = calc_normalization_factors(
+        {"Reference": 100, "Blank": 0}, ["Reference", "Blank"], "Reference"
+    )
+
+    assert result == pytest.approx({"Reference": 1, "Blank": 0})
+
+
+def test_normalization_factors_preserve_zero_reference_behavior():
+    """A zero reference retains the existing all-zero coefficients."""
+    result = calc_normalization_factors(
+        {"Reference": 0, "Other": 100}, ["Reference", "Other"], "Reference"
+    )
+
+    assert result == pytest.approx({"Reference": 0, "Other": 0})

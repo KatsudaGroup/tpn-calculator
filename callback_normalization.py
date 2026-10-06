@@ -158,8 +158,9 @@ def callback_normalization(_app: dash.Dash, default_values):
         # Second, calculate the normalize factors
         #----------------------------------------
         total_protein_columns = [x["sample_name"] for x in filter(lambda x: x["type"] == "Total",lane_relationship)]
-        ref_signal = signal_sums[normalization_target]
-        factors = {x: ref_signal/signal_sums[x] if float(signal_sums[x]) != float(0) else 0 for x in total_protein_columns}
+        factors = utilfuncs.calc_normalization_factors(
+            signal_sums, total_protein_columns, normalization_target
+        )
 
         used_factors = {}
         #----------------------------------------
