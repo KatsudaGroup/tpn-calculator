@@ -1,6 +1,12 @@
 from PIL import Image, ImageDraw, ImageFont
 import pandas as pd
 
+def calc_normalized_signal(signal_raw_value, signal_upper_bound):
+    signal_in_range = max(0, min(signal_raw_value, signal_upper_bound))
+    signal_normalized = signal_in_range / signal_upper_bound
+    signal_for_plot =  int(255 * (1 - signal_normalized))
+    return signal_for_plot
+
 class WesternBlotPlotUtil:
     def __init__(self, data, plot_sample_indices: list, mw_column_index = 0,
                  band_width: int = 20, band_spacing: int = 10, offset: int = 20, marker_molecular_weights = [],
@@ -110,13 +116,6 @@ class WesternBlotPlotUtil:
 
     def set_marker_molecular_weights(self, marker_mw_list: list[tuple[int|float, str|None]]):
         self.marker_molecular_weights = marker_mw_list
-
-
-    def calc_normalized_signal(self, signal_raw_value, signal_upper_bound):
-        signal_in_range = min(signal_raw_value, signal_upper_bound)
-        signal_normalized = signal_in_range / signal_upper_bound
-        signal_for_plot =  int(255 * (1 - signal_normalized))
-        return signal_for_plot
 
 
     def molecular_weight_reorder(self):
@@ -232,7 +231,7 @@ class WesternBlotPlotUtil:
                 line_start_x = calc_line_start_x(i_lane)
                 line_end_x   = line_start_x + band_width
                 line_y = row_index + field_origin_y
-                gray_scale_signal = self.calc_normalized_signal(signal_raw, signal_max)
+                gray_scale_signal = calc_normalized_signal(signal_raw, signal_max)
                 draw_.line( ((line_start_x, line_y), (line_end_x, line_y)), fill = gray_scale_signal )
 
                 if row_index == 0:
