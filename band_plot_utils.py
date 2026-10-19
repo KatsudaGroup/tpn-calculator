@@ -1,5 +1,8 @@
 from PIL import Image, ImageDraw, ImageFont
+from PIL.PngImagePlugin import PngInfo
 import pandas as pd
+import json
+from version import __version__
 
 def calc_normalized_signal(signal_raw_value, signal_upper_bound):
     signal_in_range = max(0, min(signal_raw_value, signal_upper_bound))
@@ -151,7 +154,7 @@ class WesternBlotPlotUtil:
         return max_row_index, min_row_index
 
 
-    def draw_bands(self, signal_max = None, draw_rectangle = True, draw_marker_line = False, write_text = False, write_label = False, rotate_label = False):
+    def draw_bands(self, signal_max = None, draw_rectangle = True, draw_marker_line = False, write_text = False, write_label = False, rotate_label = False, tpn_normalized = False):
         def generate_line_start_x_func(bandwidth, bandspacing, offsetx):
             return lambda i: i * (bandwidth + bandspacing) + bandspacing + offsetx
         #----------------------------------------
@@ -279,12 +282,52 @@ class WesternBlotPlotUtil:
                     text_y = line_y - mw_font_vcenter_offset
                     draw_.text((marker_start_x - text_right_offset - text_width, int(text_y)), text, 0, font = font)
 
+        # Preserve the configured canvas and margins, even if text overlaps or clips.
+        annotation = (
+            "Simulated / TPN-normalized" if tpn_normalized else "Simulated"
+        ) + f"\nTPN Calculator {__version__}"
+        annotation_font = ImageFont.load_default(size=12)
+        left, top, right, bottom = draw_.multiline_textbbox(
+            (0, 0), annotation, font=annotation_font, spacing=3, align="right"
+        )
+        padding = 4
+        draw_.multiline_text(
+            (im_.width - padding - right, im_.height - padding - bottom),
+            annotation, fill=0, font=annotation_font, spacing=3, align="right"
+        )
         self.image = im_
+        self.png_metadata = PngInfo()
+        self.png_metadata.add_itxt("Software", f"TPN Calculator {__version__}")
+        self.png_metadata.add_itxt(
+            "Description",
+            "Simulated / TPN-normalized" if tpn_normalized else "Simulated"
+        )
+        parameters = {
+            "I_max": float(signal_max),
+            "mw_range_min": self.mw_range_min,
+            "mw_range_max": self.mw_range_max,
+            "series": [str(self.data.columns[i]) for i in self.plot_indices],
+            "labels": self.plot_labels,
+            "band_width": self.band_width,
+            "band_spacing": self.band_spacing,
+            "margins": {"top": self.offset_top, "bottom": self.offset_bottom,
+                        "left": self.offset_left, "right": self.offset_right},
+            "label_font_size": self.label_font_size,
+            "marker_font_size": self.marker_font_size,
+            "marker_molecular_weights": self.marker_molecular_weights,
+            "draw_rectangle": draw_rectangle,
+            "draw_marker_line": draw_marker_line,
+            "write_text": write_text,
+            "write_label": write_label,
+            "rotate_label": rotate_label,
+            "image_size": list(im_.size),
+        }
+        self.png_metadata.add_itxt("TPNCalculator.Parameters", json.dumps(parameters))
         return True
 
 
     def save_png(self, filename):
-        self.image.save(filename)
+        self.image.save(filename, format="PNG", pnginfo=self.png_metadata)
 
 
     def get_image_obj(self):

@@ -3,6 +3,8 @@ from dash.dependencies import Output, Input, State
 from dash.exceptions import PreventUpdate
 from dash import dcc,ALL,ctx,ClientsideFunction
 import io
+import json
+import hashlib
 import base64
 import pandas as pd
 import band_plot_utils
@@ -74,7 +76,12 @@ def callbacks(_app: dash.Dash, default_values):
                 message2 = f"Note: The series {', '.join(blank_contain_series)} contains blank cells."
                 message += "\n"
                 message += message2
-            return message, keys, data, {'filename': filename}
+            raw_file_bytes = base64.b64decode(contents.split(',', 1)[1])
+            fileinfo = {
+                'filename': filename,
+                'sha256': hashlib.sha256(raw_file_bytes).hexdigest(),
+            }
+            return message, keys, data, fileinfo
         else:
             return "Invalid Operation!", dash.no_update, dash.no_update, dash.no_update
 
@@ -106,6 +113,7 @@ def callbacks(_app: dash.Dash, default_values):
         State('draw_mw_range_min', 'value'),
         State('draw_mw_range_max', 'value'),
         State('store_fileinfo', 'data'),
+        State('store_normalize_factor', 'data'),
 
         State({'type': "detailed_settings", "key": ALL}, "value" ),
 
@@ -115,7 +123,7 @@ def callbacks(_app: dash.Dash, default_values):
                        raw_columns, raw_data, asis_lane_setting_table_data,
                        normalized_columns, normalized_data,
                        signal_limit, marker_switch, marker_mw_input, lane_label_select, lane_label_rotate,
-                       draw_mw_range_switch, draw_mw_range_min, draw_mw_range_max, fileinfo,
+                       draw_mw_range_switch, draw_mw_range_min, draw_mw_range_max, fileinfo, normalization_info,
                        detailed_settings_value_list):
         # Process Arguments
         # XXX
@@ -237,11 +245,24 @@ def callbacks(_app: dash.Dash, default_values):
                 signal_max = signal_limit, 
                 draw_marker_line = draw_marker_line, 
                 write_text = write_text, rotate_label = lane_label_rotate,
-                write_label=plot_label_flag)
+                write_label=plot_label_flag,
+                tpn_normalized=(draw_type == "normalized_new"))
 
         img = plot_obj.get_image_obj()
+        plot_obj.png_metadata.add_itxt(
+            "TPNCalculator.Source", json.dumps({
+                "filename": fileinfo['filename'],
+                "hash_algorithm": "SHA-256",
+                "sha256": fileinfo.get('sha256'),
+            })
+        )
+        plot_obj.png_metadata.add_itxt(
+            "TPNCalculator.Normalization",
+            json.dumps(normalization_info if draw_type == "normalized_new"
+                       else {"applied": False})
+        )
         img_byte_arr = io.BytesIO()
-        img.save(img_byte_arr, format = 'PNG')
+        plot_obj.save_png(img_byte_arr)
         encoded_img = base64.b64encode(img_byte_arr.getvalue()).decode('utf-8')
 
         log_stream = io.StringIO()
@@ -607,4 +628,3 @@ def callbacks(_app: dash.Dash, default_values):
         button_id = "label_size_default_button", 
         input_keys = ["lane_label_size", "mw_label_size"], 
     )
-

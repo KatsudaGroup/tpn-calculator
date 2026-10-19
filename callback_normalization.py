@@ -108,6 +108,7 @@ def callback_normalization(_app: dash.Dash, default_values):
         Output("normalized_data_table", "data"),
         Output("normalized_data_table", "columns"),
         Output("normalization_result_table", "data"),
+        Output("store_normalize_factor", "data"),
         Input("calculate_normalized_signal_button", "n_clicks"),
         Input('raw_data_table', 'data'),
         Input('raw_data_table', 'columns'),
@@ -195,7 +196,16 @@ def callback_normalization(_app: dash.Dash, default_values):
                 "factor": used_factors[x["sample_name"]],
                 "note": msg_func(x) } for x in lane_relationship]
 
-        return result_data, result_columns, ret
+        normalization_info = {
+            "reference_series": normalization_target,
+            "mw_range_min": signal_range_min,
+            "mw_range_max": signal_range_max,
+            "stop_at_first_negative": bool(stop_summation_negative),
+            "coefficients": {name: float(value) for name, value in used_factors.items()},
+            "total_signals": {name: float(value) for name, value in signal_sums.items()},
+            "series_relationships": lane_relationship,
+        }
+        return result_data, result_columns, ret, normalization_info
 
 
     _app.clientside_callback(
